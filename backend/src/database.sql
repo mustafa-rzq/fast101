@@ -13,10 +13,12 @@ CREATE TABLE hospitals (
     hospital_location varchar(255) not null,
     hospital_link varchar(255) not null,
     average_rating FLOAT not null DEFAULT 0,
-    hospital_distance FLOAT not null DEFAULT 0,
+    latitude FLOAT not null,  -- Latitude of the hospital
+    longitude FLOAT not null, -- Longitude of the hospital
     estimated_waiting_time varchar(255) not null,
     created_at date default current_date
 );
+
 
 -- treatmentplan table
 CREATE TABLE treatmentplan (

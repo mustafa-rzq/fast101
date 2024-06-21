@@ -5,11 +5,14 @@ import axios from "axios";
 const Hospitals = () => {
   const navigate = useNavigate();
   const [hospitals, setHospitals] = useState([]);
-  const [distanceWeight, setDistanceWeight] = useState(1);
-  const [waitingTimeWeight, setWaitingTimeWeight] = useState(1);
-  const [ratingWeight, setRatingWeight] = useState(1);
+  const [distanceWeight, setDistanceWeight] = useState(0);
+  const [waitingTimeWeight, setWaitingTimeWeight] = useState(0);
+  const [ratingWeight, setRatingWeight] = useState(0);
   const [error, setError] = useState(null);
+  const [userLatitude, setUserLatitude] = useState(null);
+  const [userLongitude, setUserLongitude] = useState(null);
 
+  // Function to fetch hospitals and sort based on weights
   const fetchAndSortHospitals = async () => {
     try {
       const response = await axios.get("http://localhost:8000/api/get-hospitals");
@@ -25,10 +28,7 @@ const Hospitals = () => {
     }
   };
 
-  useEffect(() => {
-    fetchAndSortHospitals();
-  }, [distanceWeight, waitingTimeWeight, ratingWeight]);
-
+  // Function to handle click on hospital info button
   const handleClickInfo = async (hospitalId) => {
     try {
       const response = await axios.get(`http://localhost:8000/api/get-hospital-info/${hospitalId}`);
@@ -40,13 +40,37 @@ const Hospitals = () => {
     }
   };
 
+  // Function to calculate distance between two points (in this case, user and hospital)
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c; // Distance in km
+    return distance;
+  };
+
+  const deg2rad = (deg) => {
+    return deg * (Math.PI / 180);
+  };
+
+  // Function to sort hospitals based on weights and user location
   const sortHospitals = (hospitals, distanceWeight, waitingTimeWeight, ratingWeight) => {
-    const maxDistance = Math.max(...hospitals.map(hospital => hospital.hospital_distance));
+    if (userLatitude === null || userLongitude === null) {
+      return hospitals; // If user location is not available, return unsorted hospitals
+    }
+    const maxDistance = Math.max(...hospitals.map(hospital => calculateDistance(userLatitude, userLongitude, hospital.latitude, hospital.longitude)));
+
     const maxWaitingTime = Math.max(...hospitals.map(hospital => hospital.estimated_waiting_time));
     const maxRating = 5;
 
     hospitals.forEach(hospital => {
-      const normalizedDistance = hospital.hospital_distance / maxDistance;
+      const distance = calculateDistance(userLatitude, userLongitude, hospital.latitude, hospital.longitude);
+      const normalizedDistance = distance / maxDistance;
       const normalizedWaitingTime = hospital.estimated_waiting_time / maxWaitingTime;
       const normalizedRating = hospital.average_rating / maxRating;
 
@@ -55,6 +79,8 @@ const Hospitals = () => {
           normalizedWaitingTime * waitingTimeWeight +
           (1 - normalizedRating) * ratingWeight
       );
+
+      hospital.distance = distance.toFixed(2); // Round distance to 2 decimal places
     });
 
     hospitals.sort((a, b) => a.score - b.score);
@@ -62,6 +88,47 @@ const Hospitals = () => {
     return hospitals;
   };
 
+  // Effect to fetch hospitals when weights or user location changes
+  useEffect(() => {
+    fetchAndSortHospitals();
+  }, [distanceWeight, waitingTimeWeight, ratingWeight, userLatitude, userLongitude]);
+
+  // HTML script to get user location
+  useEffect(() => {
+    function getLocation() {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+              const latitude = position.coords.latitude;
+              const longitude = position.coords.longitude;
+              setUserLatitude(latitude);
+              setUserLongitude(longitude);
+            },
+            function(error) {
+              switch(error.code) {
+                case error.PERMISSION_DENIED:
+                  console.log('User denied the request for Geolocation.');
+                  break;
+                case error.POSITION_UNAVAILABLE:
+                  console.log('Location information is unavailable.');
+                  break;
+                case error.TIMEOUT:
+                  console.log('The request to get user location timed out.');
+                  break;
+                case error.UNKNOWN_ERROR:
+                  console.log('An unknown error occurred.');
+                  break;
+              }
+            }
+        );
+      } else {
+        console.log('Geolocation is not supported by this browser.');
+      }
+    }
+    getLocation();
+  }, []); // Empty dependency array to run once on mount
+
+  // Render hospitals and weights UI
   return (
       <div className="p-7 pt-20 w-5/6 mx-auto">
         <div className="p-10 mx-auto bg-white shadow-lg mt-14 rounded-xl border-2 border-gray-300">
@@ -121,8 +188,7 @@ const Hospitals = () => {
             </div>
           </div>
           <div className="p-3 rounded-lg">
-            <div
-                className="flex justify-between py-2 bg-gray-100 rounded-lg mb-3 text-center text-gray-700 font-semibold">
+            <div className="flex justify-between py-2 bg-gray-100 rounded-lg mb-3 text-center text-gray-700 font-semibold">
               <div className="w-1/5">Name</div>
               <div className="w-1/5">Address</div>
               <div className="w-1/5">Waiting Time (hours)</div>
@@ -142,7 +208,7 @@ const Hospitals = () => {
                         {hospital.estimated_waiting_time}
                       </div>
                       <div className="w-1/5 px-2">{hospital.average_rating}</div>
-                      <div className="w-1/5 px-2">{hospital.hospital_distance}</div>
+                      <div className="w-1/5 px-2">{hospital.distance}</div>
                       <div className="w-1/5 px-2">
                         <NavLink
                             className="p-1 px-2 bg-red-600 text-white rounded-lg hover:bg-blue-700 transition"
