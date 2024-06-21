@@ -89,12 +89,13 @@ exports.hospital = async (req, res) => {
     hospital_name,
     hospital_location,
     hospital_link,
+    hospital_distance,
     estimated_waiting_time,
   } = req.body;
   try {
     await db.query(
-      "INSERT INTO hospitals (hospital_name, hospital_location, hospital_link, estimated_waiting_time) VALUES ($1, $2 , $3, $4)",
-      [hospital_name, hospital_location, hospital_link, estimated_waiting_time]
+      "INSERT INTO hospitals (hospital_name, hospital_location, hospital_link, hospital_distance ,estimated_waiting_time) VALUES ($1, $2 , $3, $4)",
+      [hospital_name, hospital_location, hospital_link, hospital_distance ,estimated_waiting_time]
     );
     return res.status(201).json({
       success: true,

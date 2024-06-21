@@ -13,6 +13,7 @@ CREATE TABLE hospitals (
     hospital_location varchar(255) not null,
     hospital_link varchar(255) not null,
     average_rating FLOAT not null DEFAULT 0,
+    hospital_distance FLOAT not null DEFAULT 0,
     estimated_waiting_time varchar(255) not null,
     created_at date default current_date
 );
@@ -27,6 +28,17 @@ CREATE TABLE treatmentplan (
     notes varchar(255) not null,
     created_at date default current_date
 );
+
+-- treatmentplan table
+CREATE TABLE weights (
+    weights_id serial primary key,
+    user_id INT REFERENCES users(user_id),
+    distance_weight int  not null,
+    time_weight int not null,
+    rate_weight int not null,
+    created_at date default current_date
+);
+
 -- reviews table
 CREATE TABLE reviews (
     review_id serial primary key,
